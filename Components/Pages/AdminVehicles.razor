@@ -1,0 +1,209 @@
+@page "/admin/vehicles"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Administrator")]
+@inject ApplicationDbContext Db
+
+<PageTitle>Validation des fiches | ChooseYourCar</PageTitle>
+
+<section class="admin-page">
+    <header class="admin-header">
+        <div>
+            <p class="eyebrow">Administration</p>
+            <h1>Validation des fiches</h1>
+            <p>Contrôlez les véhicules importés avant leur publication dans le catalogue.</p>
+        </div>
+        <div class="admin-controls">
+            <label><input type="checkbox" @bind="showDrafts" /> Brouillons</label>
+            <label><input type="checkbox" @bind="showPublished" /> Published</label>
+            <span class="admin-count">@displayedVehicles.Count fiche(s) affichée(s)</span>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="admin-message" role="status">@message</div>
+    }
+
+    @if (displayedVehicles.Count == 0)
+    {
+            <div class="admin-empty">
+            <strong>Aucune fiche.</strong>
+            <span>Le catalogue ne contient aucune fiche administrable.</span>
+        </div>
+    }
+    else
+    {
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th><button class="column-sort" @onclick='() => SortBy("vehicle")'>Véhicule @SortIndicator("vehicle")</button></th>
+                        <th><button class="column-sort" @onclick='() => SortBy("quality")'>Qualité @SortIndicator("quality")</button></th>
+                        <th><button class="column-sort" @onclick='() => SortBy("status")'>Statut @SortIndicator("status")</button></th>
+                        <th><button class="column-sort" @onclick='() => SortBy("price")'>Prix TTC @SortIndicator("price")</button></th>
+                        <th><button class="column-sort" @onclick='() => SortBy("source")'>Source @SortIndicator("source")</button></th>
+                        <th><span class="visually-hidden">Action</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var vehicle in displayedVehicles)
+                    {
+                        var quality = GetQuality(vehicle);
+                        <tr>
+                            <td class="vehicle-cell">
+                                @if (string.IsNullOrWhiteSpace(vehicle.ImageUrl))
+                                {
+                                    <div class="admin-vehicle-placeholder" aria-hidden="true">@vehicle.Model</div>
+                                }
+                                else
+                                {
+                                    <img class="admin-vehicle-thumbnail" src="@vehicle.ImageUrl" alt="" loading="lazy" />
+                                }
+                                <div><strong>@vehicle.Brand @vehicle.Model</strong><span>@vehicle.Trim</span></div>
+                            </td>
+                            <td><span class="quality-badge quality-@quality.Level.ToLowerInvariant()">@quality.Score% · @quality.Label</span></td>
+                            <td><span class="status-badge">@StatusLabel(vehicle.Status)</span></td>
+                            <td>@DisplayPrice(vehicle.PriceIncludingTax)</td>
+                            <td>@(vehicle.ImportSource ?? "Saisie manuelle")</td>
+                            <td class="admin-actions">
+                                <NavLink class="secondary-button" href="@($"/vehicles/{vehicle.Id}")">Voir</NavLink>
+                                @if (vehicle.Status == VehicleStatus.Published)
+                                {
+                                    <button class="secondary-button" @onclick="() => MoveToDraftAsync(vehicle.Id)">Repasser en brouillon</button>
+                                }
+                                else
+                                {
+                                    <button class="primary-button" @onclick="() => PublishAsync(vehicle.Id)">Valider et publier</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private List<Vehicle> vehicles = [];
+    private string? message;
+    private bool showDrafts = true;
+    private bool showPublished = true;
+    private string sortColumn = "vehicle";
+    private bool sortDescending;
+    private IReadOnlyList<Vehicle> displayedVehicles => ApplyView(vehicles);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVehiclesAsync();
+    }
+
+    private async Task LoadVehiclesAsync()
+    {
+        vehicles = await Db.Vehicles
+            .AsNoTracking()
+            .Where(vehicle => vehicle.Status != VehicleStatus.Archived)
+            .OrderBy(vehicle => vehicle.Brand)
+            .ThenBy(vehicle => vehicle.Model)
+            .ToListAsync();
+    }
+
+    private async Task PublishAsync(int vehicleId)
+    {
+        var vehicle = await Db.Vehicles.SingleOrDefaultAsync(item => item.Id == vehicleId);
+        if (vehicle is null)
+        {
+            message = "Cette fiche n'existe plus.";
+            return;
+        }
+
+        vehicle.Status = VehicleStatus.Published;
+        vehicle.UpdatedAtUtc = DateTime.UtcNow;
+        await Db.SaveChangesAsync();
+        message = $"{vehicle.Brand} {vehicle.Model} est maintenant publié.";
+        await LoadVehiclesAsync();
+    }
+
+    private async Task MoveToDraftAsync(int vehicleId)
+    {
+        var vehicle = await Db.Vehicles.SingleOrDefaultAsync(item => item.Id == vehicleId);
+        if (vehicle is null)
+        {
+            message = "Cette fiche n'existe plus.";
+            return;
+        }
+
+        vehicle.Status = VehicleStatus.Draft;
+        vehicle.UpdatedAtUtc = DateTime.UtcNow;
+        await Db.SaveChangesAsync();
+        message = $"{vehicle.Brand} {vehicle.Model} est repassé en brouillon.";
+        await LoadVehiclesAsync();
+    }
+
+    private static string StatusLabel(VehicleStatus status) => status switch
+    {
+        VehicleStatus.Draft => "Brouillon",
+        VehicleStatus.PendingValidation => "En attente",
+        _ => status.ToString()
+    };
+
+    private IReadOnlyList<Vehicle> ApplyView(IEnumerable<Vehicle> source)
+    {
+        var filtered = source.Where(vehicle =>
+            (showDrafts && vehicle.Status is VehicleStatus.Draft or VehicleStatus.PendingValidation) ||
+            (showPublished && vehicle.Status == VehicleStatus.Published));
+
+        return sortColumn switch
+        {
+            "quality" => (sortDescending ? filtered.OrderByDescending(GetQualityScore) : filtered.OrderBy(GetQualityScore)).ThenBy(vehicle => vehicle.Brand).ThenBy(vehicle => vehicle.Model).ToList(),
+            "status" => (sortDescending ? filtered.OrderByDescending(vehicle => StatusLabel(vehicle.Status)) : filtered.OrderBy(vehicle => StatusLabel(vehicle.Status))).ThenBy(vehicle => vehicle.Brand).ToList(),
+            "price" => (sortDescending ? filtered.OrderByDescending(vehicle => vehicle.PriceIncludingTax ?? double.MinValue) : filtered.OrderBy(vehicle => vehicle.PriceIncludingTax ?? double.MaxValue)).ThenBy(vehicle => vehicle.Brand).ToList(),
+            "source" => (sortDescending ? filtered.OrderByDescending(vehicle => vehicle.ImportSource ?? "") : filtered.OrderBy(vehicle => vehicle.ImportSource ?? "")).ThenBy(vehicle => vehicle.Brand).ToList(),
+            _ => (sortDescending ? filtered.OrderByDescending(vehicle => vehicle.Brand).ThenByDescending(vehicle => vehicle.Model) : filtered.OrderBy(vehicle => vehicle.Brand).ThenBy(vehicle => vehicle.Model)).ToList()
+        };
+    }
+
+    private void SortBy(string column)
+    {
+        if (sortColumn == column)
+        {
+            sortDescending = !sortDescending;
+        }
+        else
+        {
+            sortColumn = column;
+            sortDescending = false;
+        }
+    }
+
+    private string SortIndicator(string column) => sortColumn == column ? (sortDescending ? "↓" : "↑") : "↕";
+    private static int GetQualityScore(Vehicle vehicle) => GetQuality(vehicle).Score;
+
+    private static (int Score, string Label, string Level) GetQuality(Vehicle vehicle)
+    {
+        var available = new[]
+        {
+            !string.IsNullOrWhiteSpace(vehicle.Brand),
+            !string.IsNullOrWhiteSpace(vehicle.Model),
+            !string.IsNullOrWhiteSpace(vehicle.Technology),
+            vehicle.PowerHp.HasValue,
+            vehicle.Transmission.Length > 0,
+            vehicle.PriceIncludingTax.HasValue,
+            vehicle.Seats.HasValue,
+            vehicle.TrunkLiters.HasValue,
+            vehicle.RangeWltpKm.HasValue || vehicle.RangeKm.HasValue,
+            !string.IsNullOrWhiteSpace(vehicle.ImageUrl),
+            !string.IsNullOrWhiteSpace(vehicle.ManufacturerUrl)
+        };
+        var score = (int)Math.Round(available.Count(value => value) * 100d / available.Length);
+        return score switch
+        {
+            >= 80 => (score, "Bonne", "good"),
+            >= 50 => (score, "À compléter", "medium"),
+            _ => (score, "Incomplète", "low")
+        };
+    }
+
+    private static string DisplayPrice(double? value) => value.HasValue ? $"{value.Value:N0} EUR TTC" : "Prix inconnu";
+}

@@ -38,7 +38,7 @@ public static class VehicleCatalog
 
         if (minRange.HasValue)
         {
-            vehicles = vehicles.Where(vehicle => vehicle.RangeWltpKm.HasValue && vehicle.RangeWltpKm >= minRange);
+            vehicles = vehicles.Where(vehicle => (vehicle.RangeWltpKm ?? vehicle.RangeKm).HasValue && (vehicle.RangeWltpKm ?? vehicle.RangeKm) >= minRange);
         }
 
         return vehicles;

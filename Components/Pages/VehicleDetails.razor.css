@@ -1,0 +1,31 @@
+.vehicle-detail { margin: 0 auto; max-width: 1180px; }
+.back-link { color: #a63d22; display: inline-block; font-size: .85rem; margin-bottom: 2rem; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.detail-hero { align-items: end; border-bottom: 1px solid #d9ddd5; display: flex; justify-content: space-between; padding-bottom: 2rem; }
+.detail-hero h1 { font-size: clamp(3rem, 7vw, 6rem); font-weight: 400; line-height: .9; margin: .6rem 0 .8rem; }
+.detail-subtitle { color: #6d7772; font-size: 1.15rem; margin: 0; }
+.detail-rating { align-items: end; display: flex; flex-direction: column; gap: .35rem; }
+.detail-rating strong { color: #a63d22; font-size: 1.5rem; font-weight: 400; }
+.detail-rating span, .muted-note { color: #6d7772; font-size: .82rem; }
+.detail-layout { display: grid; gap: 3rem; grid-template-columns: minmax(280px, 1fr) minmax(300px, .9fr); padding-top: 2.5rem; }
+.detail-visual { min-height: 440px; }
+.detail-visual img { height: 100%; max-height: 560px; object-fit: cover; width: 100%; }
+.visual-placeholder { align-items: start; background: #273532; color: white; display: flex; flex-direction: column; height: 100%; justify-content: end; min-height: 440px; padding: 2rem; }
+.visual-placeholder span { color: #b8cfc1; font-size: .85rem; text-transform: uppercase; }
+.visual-placeholder strong { font-size: clamp(3rem, 7vw, 6rem); font-weight: 400; line-height: .9; }
+.visual-placeholder small { color: #b8cfc1; margin-top: 1.5rem; }
+.detail-content { padding-top: .5rem; }
+.detail-section { border-bottom: 1px solid #d9ddd5; padding: 0 0 1.8rem; }
+.spec-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 1.4rem; }
+.spec-item { display: flex; flex-direction: column; gap: .35rem; }
+.spec-item span { color: #6d7772; font-size: .78rem; }
+.spec-item strong { font-size: 1rem; font-weight: 400; }
+.price-section { align-items: end; display: flex; justify-content: space-between; margin-top: 1.6rem; }
+.price-section strong { font-size: 1.8rem; font-weight: 400; }
+.detail-actions { display: flex; flex-direction: column; gap: .9rem; margin-top: 1.6rem; }
+.detail-actions .primary-button, .vehicle-not-found .primary-button { align-self: start; background: #d95f36; color: white; padding: .8rem 1rem; text-decoration: none; }
+.detail-actions .primary-button:hover, .vehicle-not-found .primary-button:hover { background: #a63d22; }
+.vehicle-not-found { margin: 8rem auto; max-width: 650px; text-align: center; }
+.vehicle-not-found h1 { font-size: clamp(2.4rem, 5vw, 4.5rem); font-weight: 400; line-height: .98; margin: .7rem 0 1rem; }
+.vehicle-not-found p:not(.eyebrow) { color: #6d7772; margin-bottom: 2rem; }
+@media (max-width: 760px) { .detail-hero { align-items: start; flex-direction: column; gap: 1.5rem; } .detail-rating { align-items: start; } .detail-layout { grid-template-columns: 1fr; padding-top: 1.5rem; } .detail-visual, .visual-placeholder { min-height: 300px; } .visual-placeholder strong { font-size: 4rem; } }

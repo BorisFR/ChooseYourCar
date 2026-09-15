@@ -13,9 +13,10 @@ Ce document conserve les décisions et orientations prises pendant le cadrage du
 - `Décision` : la mise à jour des données est déclenchée à la demande de l'administrateur.
 - `Décision` : une saisie manuelle par l'administrateur est disponible comme solution de secours.
 - `Décision` : le prototype de scraping commence avec Tesla, puis pourra être étendu aux autres constructeurs.
-- `Décision` : les modèles Tesla ciblés sont Model Y, Model 3, Model S et Model X.
+- `Décision` : les modèles Tesla ciblés sont Model Y, Model 3, Model S, Model X et Cybertruck.
 - `Décision` : l'URL de départ du prototype est https://www.tesla.com/fr_fr/.
 - `Décision` : le scraping Tesla est une première version exploratoire hors production, destinée à mesurer les données réellement récupérables.
+- `Décision` : le parseur Renault utilise https://www.renault.fr/ comme source exploratoire et importe les modèles détectés en brouillon.
 - `Décision` : le prototype ne cherche pas à copier l'intégralité du site ; il cible les champs nécessaires aux filtres et aux fiches.
 - `À définir` : les conditions d'utilisation et les droits sur les contenus seront vérifiés avant la production.
 

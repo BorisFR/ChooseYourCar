@@ -1,6 +1,7 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 @inject ApplicationDbContext Db
+@inject NavigationManager Navigation
 
 <PageTitle>Catalogue | ChooseYourCar</PageTitle>
 
@@ -27,7 +28,7 @@
 		<label>Marque<select @bind="brand"><option value="">Toutes les marques</option>@foreach (var item in brands) { <option value="@item">@item</option> }</select></label>
 		<label>Technologie<select @bind="technology"><option value="">Toutes les motorisations</option>@foreach (var item in technologies) { <option value="@item">@item</option> }</select></label>
 		<label>Prix TTC maximum<input type="number" @bind="maxPrice" placeholder="Sans limite" /></label>
-		<label>Autonomie WLTP minimum<input type="number" @bind="minRange" placeholder="Sans limite" /></label>
+		<label>Autonomie minimum<input type="number" @bind="minRange" placeholder="Sans limite" /></label>
 		<button class="primary-button" @onclick="ApplyFilters">Voir les resultats</button>
 	</aside>
 
@@ -46,11 +47,20 @@
 			<div class="vehicle-grid">
 				@foreach (var vehicle in visibleVehicles)
 				{
-					<article class="vehicle-card">
-						<div class="vehicle-image"><span>@vehicle.Brand</span><strong>@vehicle.Model</strong></div>
+					<article class="vehicle-card" role="link" tabindex="0" @onclick="() => OpenVehicle(vehicle.Id)" @onkeydown="(args) => HandleCardKeyDown(args, vehicle.Id)">
+						<div class="vehicle-image">
+							@if (string.IsNullOrWhiteSpace(vehicle.ImageUrl))
+							{
+								<span>@vehicle.Brand</span><strong>@vehicle.Model</strong><small>Visuel indisponible</small>
+							}
+							else
+							{
+								<img src="@vehicle.ImageUrl" alt="@vehicle.Brand @vehicle.Model" loading="lazy" />
+							}
+						</div>
 						<div class="vehicle-card-body">
 							<div class="vehicle-title"><div><h3>@vehicle.Brand @vehicle.Model</h3><p>@vehicle.Trim · @vehicle.Year</p></div><span class="rating">★ @vehicle.AverageRating.ToString("0.0")</span></div>
-							<div class="vehicle-specs"><span>@vehicle.Technology</span><span>@Display(vehicle.RangeWltpKm, " km")</span><span>@Display(vehicle.PowerHp, " ch")</span></div>
+							<div class="vehicle-specs"><span>@vehicle.Technology</span><span>@Display(vehicle.RangeWltpKm ?? vehicle.RangeKm, " km")</span><span>@Display(vehicle.PowerHp, " ch")</span></div>
 							<div class="vehicle-footer"><strong>@DisplayPrice(vehicle.PriceIncludingTax)</strong><span>@vehicle.FavoriteCount favoris</span></div>
 						</div>
 					</article>
@@ -112,6 +122,14 @@
 	}
 
 	private void LoadMore() => visibleCount += PageSize;
+	private void OpenVehicle(int vehicleId) => Navigation.NavigateTo($"/vehicles/{vehicleId}");
+	private void HandleCardKeyDown(KeyboardEventArgs args, int vehicleId)
+	{
+		if (args.Key is "Enter" or " ")
+		{
+			OpenVehicle(vehicleId);
+		}
+	}
 	private static string Display<T>(T? value, string suffix) where T : struct => value.HasValue ? $"{value}{suffix}" : "Inconnue";
 	private static string DisplayPrice(double? value) => value.HasValue ? $"{value.Value:N0} EUR TTC" : "Prix inconnu";
 }

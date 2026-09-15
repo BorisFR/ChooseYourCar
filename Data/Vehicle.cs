@@ -23,14 +23,22 @@ public sealed class Vehicle
     public double? PriceExcludingTax { get; set; }
     public int? Seats { get; set; }
     public int? TrunkLiters { get; set; }
+    public int? RangeKm { get; set; }
     public int? RangeWltpKm { get; set; }
     public int? Co2GramsPerKm { get; set; }
+    public double? BatteryCapacityKwh { get; set; }
+    public double? AccelerationSeconds { get; set; }
+    public int? ChargingStartPercent { get; set; }
+    public int? ChargingEndPercent { get; set; }
+    public int? ChargingTimeMinutes { get; set; }
     public double AverageRating { get; set; }
     public int RatingCount { get; set; }
     public int FavoriteCount { get; set; }
     public int ViewCount { get; set; }
     public string? ImageUrl { get; set; }
     public string? ManufacturerUrl { get; set; }
+    public string? ImportSource { get; set; }
+    public DateTime? CollectedAtUtc { get; set; }
     public VehicleStatus Status { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 }

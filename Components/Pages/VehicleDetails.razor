@@ -1,0 +1,118 @@
+@page "/vehicles/{VehicleId:int}"
+@rendermode InteractiveServer
+@inject ApplicationDbContext Db
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>@PageTitleText</PageTitle>
+
+@if (vehicle is null)
+{
+    <section class="vehicle-not-found">
+        <p class="eyebrow">Catalogue</p>
+        <h1>Cette fiche n'est pas disponible.</h1>
+        <p>Le véhicule est inconnu, archivé ou n'a pas encore été publié.</p>
+        <NavLink class="primary-button" href="/">Retour au catalogue</NavLink>
+    </section>
+}
+else
+{
+    <article class="vehicle-detail">
+        <NavLink class="back-link" href="/">← Retour au catalogue</NavLink>
+
+        <header class="detail-hero">
+            <div class="detail-identity">
+                <p class="eyebrow">@vehicle.Brand · @Display(vehicle.Year)</p>
+                <h1>@vehicle.Model</h1>
+                <p class="detail-subtitle">@vehicle.Generation · @vehicle.Trim</p>
+                @if (vehicle.Status != VehicleStatus.Published)
+                {
+                    <span class="muted-note">Prévisualisation · @StatusLabel(vehicle.Status)</span>
+                }
+            </div>
+            <div class="detail-rating">
+                <strong>★ @vehicle.AverageRating.ToString("0.0")</strong>
+                <span>@vehicle.RatingCount avis · @vehicle.FavoriteCount favoris</span>
+            </div>
+        </header>
+
+        <div class="detail-layout">
+            <section class="detail-visual" aria-label="Visuel du véhicule">
+                @if (string.IsNullOrWhiteSpace(vehicle.ImageUrl))
+                {
+                    <div class="visual-placeholder"><span>@vehicle.Brand</span><strong>@vehicle.Model</strong><small>Visuel indisponible</small></div>
+                }
+                else
+                {
+                    <img src="@vehicle.ImageUrl" alt="@vehicle.Brand @vehicle.Model" />
+                }
+            </section>
+
+            <section class="detail-content">
+                <div class="detail-section">
+                    <p class="eyebrow">L'essentiel</p>
+                    <div class="spec-grid">
+                        <div class="spec-item"><span>Technologie</span><strong>@vehicle.Technology</strong></div>
+                        <div class="spec-item"><span>Puissance</span><strong>@Display(vehicle.PowerHp, " ch")</strong></div>
+                        <div class="spec-item"><span>Transmission</span><strong>@vehicle.Transmission</strong></div>
+                        <div class="spec-item"><span>Places</span><strong>@Display(vehicle.Seats)</strong></div>
+                        <div class="spec-item"><span>Coffre</span><strong>@Display(vehicle.TrunkLiters, " L")</strong></div>
+                        <div class="spec-item"><span>@(vehicle.RangeWltpKm.HasValue ? "Autonomie WLTP" : "Autonomie estimée")</span><strong>@Display(vehicle.RangeWltpKm ?? vehicle.RangeKm, " km")</strong></div>
+                        <div class="spec-item"><span>CO2</span><strong>@Display(vehicle.Co2GramsPerKm, " g/km")</strong></div>
+                        <div class="spec-item"><span>Batterie</span><strong>@DisplayDecimal(vehicle.BatteryCapacityKwh, " kWh")</strong></div>
+                        <div class="spec-item"><span>0 à 100 km/h</span><strong>@DisplayDecimal(vehicle.AccelerationSeconds, " s")</strong></div>
+                        <div class="spec-item"><span>Recharge rapide</span><strong>@DisplayCharging(vehicle.ChargingStartPercent, vehicle.ChargingEndPercent, vehicle.ChargingTimeMinutes)</strong></div>
+                        <div class="spec-item"><span>Prix HT</span><strong>@DisplayPrice(vehicle.PriceExcludingTax, " HT")</strong></div>
+                    </div>
+                </div>
+
+                <div class="detail-section price-section">
+                    <span class="eyebrow">Prix catalogue</span>
+                    <strong>@DisplayPrice(vehicle.PriceIncludingTax, " TTC")</strong>
+                </div>
+
+                <div class="detail-section detail-actions">
+                    @if (!string.IsNullOrWhiteSpace(vehicle.ManufacturerUrl))
+                    {
+                        <a class="primary-button" href="@vehicle.ManufacturerUrl" target="_blank" rel="noopener noreferrer">Voir chez le constructeur <span aria-hidden="true">↗</span></a>
+                    }
+                    else
+                    {
+                        <span class="muted-note">Lien constructeur indisponible</span>
+                    }
+                    <span class="muted-note">@vehicle.ViewCount vues · Mise à jour @vehicle.UpdatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                </div>
+            </section>
+        </div>
+    </article>
+}
+
+@code {
+    [Parameter]
+    public int VehicleId { get; set; }
+
+    private Vehicle? vehicle;
+    private string PageTitleText => vehicle is null ? "Fiche indisponible | ChooseYourCar" : $"{vehicle.Brand} {vehicle.Model} | ChooseYourCar";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var canPreview = authenticationState.User.IsInRole("Administrator");
+
+        vehicle = Db.Vehicles
+            .AsNoTracking()
+            .SingleOrDefault(item => item.Id == VehicleId &&
+                (item.Status == VehicleStatus.Published || canPreview));
+    }
+
+    private static string Display(int? value, string suffix = "") => value.HasValue ? $"{value}{suffix}" : "Inconnue";
+    private static string DisplayPrice(double? value, string suffix) => value.HasValue ? $"{value.Value:N0} EUR{suffix}" : "Prix inconnu";
+    private static string DisplayDecimal(double? value, string suffix) => value.HasValue ? $"{value.Value:0.##}{suffix}" : "Inconnue";
+    private static string DisplayCharging(int? start, int? end, int? minutes) => start.HasValue && end.HasValue && minutes.HasValue ? $"{start}-{end}% en {minutes} min" : "Inconnue";
+    private static string StatusLabel(VehicleStatus status) => status switch
+    {
+        VehicleStatus.Draft => "Brouillon",
+        VehicleStatus.PendingValidation => "En attente de validation",
+        VehicleStatus.Archived => "Archivée",
+        _ => "Publiée"
+    };
+}

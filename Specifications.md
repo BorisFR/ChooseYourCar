@@ -121,7 +121,8 @@ Le premier parseur est un prototype exploratoire hors production. Il teste les m
 - Model Y ;
 - Model 3 ;
 - Model S ;
-- Model X.
+- Model X ;
+- Cybertruck.
 
 Le prototype doit mesurer ce qui est réellement récupérable et produire un rapport de couverture par champ : récupérable, partiellement récupérable, absent ou à saisir manuellement.
 

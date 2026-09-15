@@ -88,15 +88,33 @@ namespace ChooseYourCar.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("AccelerationSeconds")
+                        .HasColumnType("REAL");
+
                     b.Property<double>("AverageRating")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("BatteryCapacityKwh")
                         .HasColumnType("REAL");
 
                     b.Property<string>("Brand")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ChargingEndPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ChargingStartPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ChargingTimeMinutes")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("Co2GramsPerKm")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CollectedAtUtc")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("FavoriteCount")
                         .HasColumnType("INTEGER");
@@ -106,6 +124,9 @@ namespace ChooseYourCar.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ImageUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImportSource")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ManufacturerUrl")
@@ -123,6 +144,9 @@ namespace ChooseYourCar.Migrations
 
                     b.Property<double?>("PriceIncludingTax")
                         .HasColumnType("REAL");
+
+                    b.Property<int?>("RangeKm")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int?>("RangeWltpKm")
                         .HasColumnType("INTEGER");
