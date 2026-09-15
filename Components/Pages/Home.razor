@@ -1,0 +1,117 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject ApplicationDbContext Db
+
+<PageTitle>Catalogue | ChooseYourCar</PageTitle>
+
+<section class="catalogue-hero">
+	<div>
+		<p class="eyebrow">Le catalogue automobile francais</p>
+		<h1>Trouvez la voiture qui vous ressemble.</h1>
+		<p class="hero-copy">Comparez les vehicules neufs sur les criteres qui comptent vraiment.</p>
+	</div>
+	<div class="hero-stat"><strong>@filteredVehicles.Count</strong><span>vehicules publies</span></div>
+</section>
+
+<section class="catalogue-shell">
+	<aside class="filters-panel" aria-label="Filtres du catalogue">
+		<div class="section-heading">
+			<div>
+				<p class="eyebrow">Recherche</p>
+				<h2>Affinez votre selection</h2>
+			</div>
+			<button class="text-button" @onclick="ResetFilters">Reinitialiser</button>
+		</div>
+
+		<label>Modele, marque ou finition<input @bind="search" @bind:event="oninput" placeholder="Ex. Model Y" /></label>
+		<label>Marque<select @bind="brand"><option value="">Toutes les marques</option>@foreach (var item in brands) { <option value="@item">@item</option> }</select></label>
+		<label>Technologie<select @bind="technology"><option value="">Toutes les motorisations</option>@foreach (var item in technologies) { <option value="@item">@item</option> }</select></label>
+		<label>Prix TTC maximum<input type="number" @bind="maxPrice" placeholder="Sans limite" /></label>
+		<label>Autonomie WLTP minimum<input type="number" @bind="minRange" placeholder="Sans limite" /></label>
+		<button class="primary-button" @onclick="ApplyFilters">Voir les resultats</button>
+	</aside>
+
+	<div class="results-panel">
+		<div class="results-toolbar">
+			<div><p class="eyebrow">Resultats</p><h2>@filteredVehicles.Count vehicule(s)</h2></div>
+			<label class="sort-control">Trier par<select @bind="sort" @bind:after="ApplyFilters"><option value="Price">Prix</option><option value="Rating">Note</option><option value="Favorites">Favoris</option><option value="Views">Vues</option><option value="Updated">Mise a jour</option></select></label>
+		</div>
+
+		@if (visibleVehicles.Count == 0)
+		{
+			<div class="empty-state"><strong>Aucun vehicule ne correspond.</strong><span>Modifiez un ou plusieurs criteres pour elargir votre recherche.</span></div>
+		}
+		else
+		{
+			<div class="vehicle-grid">
+				@foreach (var vehicle in visibleVehicles)
+				{
+					<article class="vehicle-card">
+						<div class="vehicle-image"><span>@vehicle.Brand</span><strong>@vehicle.Model</strong></div>
+						<div class="vehicle-card-body">
+							<div class="vehicle-title"><div><h3>@vehicle.Brand @vehicle.Model</h3><p>@vehicle.Trim · @vehicle.Year</p></div><span class="rating">★ @vehicle.AverageRating.ToString("0.0")</span></div>
+							<div class="vehicle-specs"><span>@vehicle.Technology</span><span>@Display(vehicle.RangeWltpKm, " km")</span><span>@Display(vehicle.PowerHp, " ch")</span></div>
+							<div class="vehicle-footer"><strong>@DisplayPrice(vehicle.PriceIncludingTax)</strong><span>@vehicle.FavoriteCount favoris</span></div>
+						</div>
+					</article>
+				}
+			</div>
+			@if (visibleCount < filteredVehicles.Count)
+			{
+				<button class="load-more" @onclick="LoadMore">Afficher plus de vehicules <span>↓</span></button>
+			}
+		}
+	</div>
+</section>
+
+@code {
+	private const int PageSize = 4;
+	private List<Vehicle> allVehicles = [];
+	private List<Vehicle> filteredVehicles = [];
+	private int visibleCount = PageSize;
+	private string search = string.Empty;
+	private string brand = string.Empty;
+	private string technology = string.Empty;
+	private double? maxPrice;
+	private int? minRange;
+	private string sort = "Price";
+
+	private IEnumerable<string> brands => allVehicles.Select(vehicle => vehicle.Brand).Distinct().Order();
+	private IEnumerable<string> technologies => allVehicles.Select(vehicle => vehicle.Technology).Distinct().Order();
+	private IReadOnlyList<Vehicle> visibleVehicles => filteredVehicles.Take(visibleCount).ToList();
+
+	protected override void OnInitialized()
+	{
+		allVehicles = Db.Vehicles.AsNoTracking().ToList();
+		ApplyFilters();
+	}
+
+	private void ApplyFilters()
+	{
+		var query = VehicleCatalog.ApplyFilters(Db.Vehicles.AsNoTracking(), search, brand, technology, maxPrice, minRange);
+		filteredVehicles = sort switch
+		{
+			"Rating" => query.OrderByDescending(vehicle => vehicle.AverageRating).ThenByDescending(vehicle => vehicle.RatingCount).ToList(),
+			"Favorites" => query.OrderByDescending(vehicle => vehicle.FavoriteCount).ToList(),
+			"Views" => query.OrderByDescending(vehicle => vehicle.ViewCount).ToList(),
+			"Updated" => query.OrderByDescending(vehicle => vehicle.UpdatedAtUtc).ToList(),
+			_ => query.OrderBy(vehicle => vehicle.PriceIncludingTax ?? double.MaxValue).ToList()
+		};
+		visibleCount = PageSize;
+	}
+
+	private void ResetFilters()
+	{
+		search = string.Empty;
+		brand = string.Empty;
+		technology = string.Empty;
+		maxPrice = null;
+		minRange = null;
+		sort = "Price";
+		ApplyFilters();
+	}
+
+	private void LoadMore() => visibleCount += PageSize;
+	private static string Display<T>(T? value, string suffix) where T : struct => value.HasValue ? $"{value}{suffix}" : "Inconnue";
+	private static string DisplayPrice(double? value) => value.HasValue ? $"{value.Value:N0} EUR TTC" : "Prix inconnu";
+}
